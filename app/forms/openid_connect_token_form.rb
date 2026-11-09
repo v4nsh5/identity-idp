@@ -88,6 +88,9 @@ class OpenidConnectTokenForm
 
   attr_reader :identity, :code_expiration
 
+  # The ID token comes from the same redemption as the subject token, as in any OpenID Connect
+  # sign-in, so the broker learns who signed in without a second sign-in. Its `at_hash` is over
+  # the subject token, the access token this response returns (OpenID Connect Core 3.3.2.11).
   def token_exchange_subject_token_response
     issued_token = TokenExchange::SubjectTokenIssuer.issue(
       identity:,
@@ -98,6 +101,7 @@ class OpenidConnectTokenForm
       access_token: issued_token.token,
       token_type: dpop_binding_required? ? 'DPoP' : 'Bearer',
       expires_in: issued_token.expires_in,
+      id_token: IdTokenBuilder.new(identity:, code:, access_token: issued_token.token).id_token,
       scope: identity.scope,
     }
   end

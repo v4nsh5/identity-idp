@@ -6,9 +6,12 @@ class IdTokenBuilder
 
   attr_reader :identity, :now
 
-  def initialize(identity:, code:, custom_expiration: nil, now: Time.zone.now)
+  # @param access_token [String, nil] the access token returned with the ID token, which `at_hash`
+  #   is computed over; defaults to the identity's, which a token exchange code doesn't return
+  def initialize(identity:, code:, access_token: nil, custom_expiration: nil, now: Time.zone.now)
     @identity = identity
     @code = code
+    @access_token = access_token || identity.access_token
     @custom_expiration = custom_expiration
     @now = now
   end
@@ -28,7 +31,7 @@ class IdTokenBuilder
 
   private
 
-  attr_reader :code
+  attr_reader :code, :access_token
 
   def jwt_payload
     OpenidConnectUserInfoPresenter.new(identity, session_accessor: session_accessor)
@@ -43,7 +46,7 @@ class IdTokenBuilder
       nonce: identity.nonce,
       aud: identity.service_provider,
       jti: SecureRandom.urlsafe_base64,
-      at_hash: hash_token(identity.access_token),
+      at_hash: hash_token(access_token),
       c_hash: hash_token(code),
     }
   end

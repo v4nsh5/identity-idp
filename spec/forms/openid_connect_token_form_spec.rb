@@ -3,6 +3,19 @@ require 'rails_helper'
 RSpec.describe OpenidConnectTokenForm do
   include Rails.application.routes.url_helpers
 
+  def decode_id_token(id_token)
+    JWT.decode(
+      id_token, Rails.application.config.oidc_public_key, true, algorithm: 'RS256'
+    ).first.with_indifferent_access
+  end
+
+  def token_hash(token)
+    Base64.urlsafe_encode64(
+      Digest::SHA256.digest(token).byteslice(0, IdTokenBuilder::NUM_BYTES_FIRST_128_BITS),
+      padding: false,
+    )
+  end
+
   subject(:form) { OpenidConnectTokenForm.new(params) }
 
   let(:params) do
@@ -701,6 +714,20 @@ RSpec.describe OpenidConnectTokenForm do
           subject_token = TokenExchange::SubjectToken.load(response[:access_token])
           expect(subject_token.dpop_jkt).to eq(stored_thumbprint)
         end
+
+        it 'returns an ID token for the sign-in, with at_hash over the subject token' do
+          response = form.response
+          id_token = decode_id_token(response[:id_token])
+
+          expect(id_token).to include(
+            iss: root_url,
+            aud: service_provider.issuer,
+            sub: AgencyIdentityLinker.new(identity).link_identity.uuid,
+            nonce: identity.nonce,
+            at_hash: token_hash(response[:access_token]),
+            c_hash: token_hash(code),
+          )
+        end
       end
 
       context 'without a proof' do
@@ -938,6 +965,14 @@ RSpec.describe OpenidConnectTokenForm do
           expires_in: 600,
           scope:,
         )
+      end
+
+      it 'returns an ID token with at_hash over the subject token' do
+        OutOfBandSessionAccessor.new(identity.rails_session_id).put_empty_user_session(300)
+        id_token = decode_id_token(response[:id_token])
+
+        expect(id_token[:at_hash]).to eq(token_hash(response[:access_token]))
+        expect(id_token[:aud]).to eq(client_id)
       end
 
       it 'stores the subject token metadata in Redis' do

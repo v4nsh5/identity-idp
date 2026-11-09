@@ -173,6 +173,23 @@ RSpec.describe IdTokenBuilder do
       expect(decoded_payload[:at_hash]).to eq('wfgvmE9VxjAudsl9lc6TqA')
     end
 
+    context 'with the access token the response returns instead of the identity’s' do
+      subject(:builder) do
+        IdTokenBuilder.new(
+          identity:, code:, access_token: 'subject-token', custom_expiration:,
+          now:
+        )
+      end
+
+      it 'sets the access token hash over that token' do
+        leftmost_128_bits = Digest::SHA256.digest('subject-token')
+          .byteslice(0, IdTokenBuilder::NUM_BYTES_FIRST_128_BITS)
+
+        expect(decoded_payload[:at_hash])
+          .to eq(Base64.urlsafe_encode64(leftmost_128_bits, padding: false))
+      end
+    end
+
     it 'sets the code hash correctly' do
       leftmost_128_bits = Digest::SHA256.digest(code)
         .byteslice(0, IdTokenBuilder::NUM_BYTES_FIRST_128_BITS)
