@@ -30,7 +30,7 @@ module TokenExchange
       token = jwe(issued_at:, expires_at:)
       access_token = AccessToken.new(
         id: AccessToken.digest(token),
-        identity_uuid: target_identity.uuid,
+        identity_uuid: target_sub,
         broker_issuer: subject_token.broker_issuer,
         target_issuer:,
         resource:,
@@ -80,7 +80,7 @@ module TokenExchange
     def payload(issued_at:, expires_at:)
       {
         iss: IdentityConfig.store.domain_name,
-        sub: target_identity.uuid,
+        sub: target_sub,
         aud: target_issuer,
         exp: expires_at,
         iat: issued_at,
@@ -119,6 +119,14 @@ module TokenExchange
 
     def target
       @target ||= ServiceProvider.find_by!(issuer: target_issuer)
+    end
+
+    # The same `sub` the target receives in its own ID tokens: the person's identifier at the
+    # target's agency, shared by every client of that agency. Without this, a person who first
+    # signed in to another client of the same agency would arrive under a different `sub` than
+    # the one the target already knows them by.
+    def target_sub
+      @target_sub ||= AgencyIdentityLinker.new(target_identity).link_identity.uuid
     end
 
     def target_identity

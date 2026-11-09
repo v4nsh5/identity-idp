@@ -65,6 +65,37 @@ RSpec.describe TokenExchange::AccessTokenIssuer do
       )
     end
 
+    context 'when the person signed in to another client of the target\'s agency first' do
+      let!(:sibling) do
+        create(:service_provider, :active, issuer: 'sibling-issuer', agency: target.agency)
+      end
+      let!(:sibling_identity) do
+        create(:service_provider_identity, service_provider: sibling.issuer, user:)
+      end
+      let!(:target_identity) do
+        AgencyIdentityLinker.new(sibling_identity).link_identity
+        create(:service_provider_identity, service_provider: target_issuer, user:)
+      end
+
+      it 'uses the agency subject the target sees in its own ID tokens' do
+        jwt = JWE.decrypt(subject.token, target_private_key)
+        payload = JWT.decode(
+          jwt, Rails.application.config.oidc_public_key, true,
+          algorithm: IdTokenBuilder::JWT_SIGNING_ALGORITHM
+        ).first
+
+        expect(target_identity.uuid).not_to eq(sibling_identity.uuid)
+        expect(payload['sub']).to eq(sibling_identity.uuid)
+        expect(payload['sub'])
+          .to eq(OpenidConnectUserInfoPresenter.new(target_identity).user_info[:sub])
+      end
+
+      it 'stores the agency subject on the record' do
+        expect(TokenExchange::AccessToken.load(subject.token).identity_uuid)
+          .to eq(sibling_identity.uuid)
+      end
+    end
+
     it 'encrypts to the target through the shared encryptor, naming the key in the header' do
       header = JSON.parse(Base64.urlsafe_decode64(subject.token.split('.').first))
 
