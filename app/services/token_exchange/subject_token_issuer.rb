@@ -6,14 +6,19 @@ module TokenExchange
 
     # @param dpop_jkt [String, nil] RFC 7638 thumbprint of the key the subject token is bound to
     #   (RFC 9449), carried from the authorization code it is issued for; nil for a bearer token
-    def self.issue(identity:, actor_return_log_id: nil, dpop_jkt: nil)
-      new(identity:, actor_return_log_id:, dpop_jkt:).issue
+    # @param scope [String, nil] scope granted at the sign-in the token comes from; defaults to
+    #   the identity's, which is that sign-in's only while its code is being redeemed
+    # @param ial [Integer, nil] as for scope
+    def self.issue(identity:, actor_return_log_id: nil, dpop_jkt: nil, scope: nil, ial: nil)
+      new(identity:, actor_return_log_id:, dpop_jkt:, scope:, ial:).issue
     end
 
-    def initialize(identity:, actor_return_log_id:, dpop_jkt:)
+    def initialize(identity:, actor_return_log_id:, dpop_jkt:, scope:, ial:)
       @identity = identity
       @actor_return_log_id = actor_return_log_id
       @dpop_jkt = dpop_jkt
+      @scope = scope || identity.scope
+      @ial = ial || identity.ial
     end
 
     def issue
@@ -23,8 +28,8 @@ module TokenExchange
         id: SubjectToken.digest(token),
         identity_uuid: identity.uuid,
         broker_issuer: identity.service_provider,
-        scope: identity.scope,
-        ial: identity.ial,
+        scope:,
+        ial:,
         actor_return_log_id:,
         dpop_jkt:,
         issued_at: Time.zone.now.to_i,
@@ -37,6 +42,6 @@ module TokenExchange
 
     private
 
-    attr_reader :identity, :actor_return_log_id, :dpop_jkt
+    attr_reader :identity, :actor_return_log_id, :dpop_jkt, :scope, :ial
   end
 end
