@@ -46,6 +46,7 @@ class OpenidConnectTokenExchangeForm
   validate :validate_subject_token, unless: :client_rejected?
   validate :validate_actor_return_log, unless: :client_rejected?
   validate :validate_scope, unless: :client_rejected?
+  validate :validate_audience_granted, unless: :client_rejected?
   validate :validate_target_identity_ial2, unless: :client_rejected?
   validate :validate_dpop_proof, unless: :client_rejected?
 
@@ -174,6 +175,23 @@ class OpenidConnectTokenExchangeForm
     return if (requested_scopes - subject_scopes).blank?
 
     errors.add(:scope, :invalid)
+  end
+
+  # Consent alone would let a subject token granted for one target be exchanged
+  # for any other target the user consented to earlier. Require that the
+  # subject token carries the scope that names this audience.
+  def validate_audience_granted
+    return if loaded_subject_token.blank?
+
+    subject_scopes = loaded_subject_token.scope.to_s.split(' ')
+    granted_scope = "#{TokenExchange::Constants::SCOPE_PREFIX}#{target.token_exchange_scope}"
+    return if subject_scopes.include?(granted_scope)
+
+    errors.add(
+      :audience,
+      :not_granted,
+      message: 'audience not granted to this subject token',
+    )
   end
 
   def validate_dpop_proof

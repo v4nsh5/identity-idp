@@ -170,11 +170,46 @@ RSpec.describe OpenidConnectTokenExchangeForm do
     end
 
     context 'when the request omits scope' do
-      let(:scope) { nil }
+      let(:params) { super().merge(scope: nil) }
 
       it 'uses the subject token scope' do
         form.submit
         expect(form.response[:scope]).to eq(scope)
+      end
+    end
+
+    context 'when the subject token was granted for a different target' do
+      let(:other_target) { create(:service_provider, :active, issuer: 'other-target-issuer') }
+      let(:audience) { other_target.issuer }
+
+      before do
+        allow(IdentityConfig.store).to receive(:token_exchange_allowed_targets).and_return(
+          [
+            { issuer: target_issuer, scope: 'passport' },
+            { issuer: other_target.issuer, scope: 'benefits' },
+          ],
+        )
+        create(:service_provider_identity, user:, service_provider: other_target.issuer, ial: 2)
+        create(:user_consent_sts, user:, target_app: other_target.issuer)
+      end
+
+      it 'is invalid' do
+        expect(form.submit.success?).to eq(false)
+        expect(form.errors.details[:audience]).to include(error: :not_granted)
+      end
+
+      it 'does not issue a delegated token' do
+        expect(TokenExchange::AccessTokenIssuer).to_not receive(:issue)
+
+        form.response
+      end
+
+      context 'when the subject token was granted for both targets' do
+        let(:scope) { 'openid token_exchange:passport token_exchange:benefits' }
+
+        it 'is valid' do
+          expect(form.submit.success?).to eq(true)
+        end
       end
     end
 
@@ -645,6 +680,30 @@ RSpec.describe OpenidConnectTokenExchangeForm do
 
       it 'returns invalid_scope' do
         expect(error).to eq('invalid_scope')
+      end
+
+      it 'returns a 400' do
+        expect(form.http_status).to eq(:bad_request)
+      end
+    end
+
+    context 'when the subject token was granted for a different target' do
+      let(:other_target) { create(:service_provider, :active, issuer: 'other-target-issuer') }
+      let(:audience) { other_target.issuer }
+
+      before do
+        allow(IdentityConfig.store).to receive(:token_exchange_allowed_targets).and_return(
+          [
+            { issuer: target_issuer, scope: 'passport' },
+            { issuer: other_target.issuer, scope: 'benefits' },
+          ],
+        )
+        create(:service_provider_identity, user:, service_provider: other_target.issuer, ial: 2)
+        create(:user_consent_sts, user:, target_app: other_target.issuer)
+      end
+
+      it 'returns invalid_target' do
+        expect(error).to eq('invalid_target')
       end
 
       it 'returns a 400' do

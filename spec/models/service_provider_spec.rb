@@ -236,6 +236,25 @@ RSpec.describe ServiceProvider do
     end
   end
 
+  describe '#token_exchange_scope' do
+    before do
+      allow(IdentityConfig.store).to receive(:token_exchange_allowed_targets).and_return(
+        [
+          { issuer: 'an-issuer', scope: 'benefits' },
+          { issuer: service_provider.issuer, scope: 'passport' },
+        ],
+      )
+    end
+
+    it 'returns the scope configured for the target' do
+      expect(service_provider.token_exchange_scope).to eq('passport')
+    end
+
+    it 'returns nil for an sp that is not an allowlisted target' do
+      expect(build(:service_provider, issuer: 'unlisted').token_exchange_scope).to be_nil
+    end
+  end
+
   describe '#attempts_public_key' do
     context 'when the sp is configured to use the attempts api' do
       context 'when there is no public key set in the configuration' do

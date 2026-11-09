@@ -101,6 +101,14 @@ class ServiceProvider < ApplicationRecord
     end
   end
 
+  # The `token_exchange:<scope>` suffix a subject token must carry to be
+  # exchanged for this target, or nil when the target is not allowlisted.
+  def token_exchange_scope
+    IdentityConfig.store.token_exchange_allowed_targets
+      .find { |target| target.fetch(:issuer) == issuer }
+      &.fetch(:scope)
+  end
+
   def dpop_required?
     pkce == true && IdentityConfig.store.dpop_required_issuers.include?(issuer)
   end
