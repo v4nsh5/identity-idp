@@ -2,9 +2,10 @@ require 'rails_helper'
 
 RSpec.describe StsConsentForm do
   let(:user) { create(:user) }
-  let(:target_app) { 'urn:gov:gsa:openidconnect:sp:broker' }
+  let(:broker_issuer) { 'urn:gov:gsa:openidconnect:sp:broker' }
+  let(:target_app) { 'urn:gov:gsa:openidconnect:sp:target' }
 
-  subject(:form) { described_class.new(user:, target_app:) }
+  subject(:form) { described_class.new(user:, broker_issuer:, target_app:) }
 
   before do
     allow(IdentityConfig.store).to receive(:sts_consent_expiration_in_days).and_return(365)
@@ -26,16 +27,17 @@ RSpec.describe StsConsentForm do
         consent = UserConsentSts.last
         expect(consent.user).to eq(user)
         expect(consent.target_app).to eq(target_app)
+        expect(consent.broker_issuer).to eq(broker_issuer)
       end
 
       it 'does not create a duplicate when consent already exists' do
-        UserConsentSts.create!(user:, target_app:)
+        UserConsentSts.create!(user:, broker_issuer:, target_app:)
 
         expect { form.submit(params) }.not_to change { UserConsentSts.count }
       end
 
       it 'refreshes an expired consent so it becomes valid again' do
-        consent = UserConsentSts.create!(user:, target_app:)
+        consent = UserConsentSts.create!(user:, broker_issuer:, target_app:)
         consent.update!(created_at: 366.days.ago)
 
         expect(form.submit(params).success?).to eq(true)

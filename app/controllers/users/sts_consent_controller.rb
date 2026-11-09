@@ -39,11 +39,15 @@ module Users
     private
 
     def build_form
-      StsConsentForm.new(user: current_user, target_app:)
+      StsConsentForm.new(user: current_user, broker_issuer:, target_app:)
     end
 
     def target_app
       sp_session[:sts_target_app]
+    end
+
+    def broker_issuer
+      sp_session[:sts_broker_issuer]
     end
 
     def sp_return_url_resolver
@@ -61,7 +65,7 @@ module Users
     end
 
     def ensure_sp_in_session_with_request_url
-      return if sp_session&.dig(:request_url) && target_app.present?
+      return if sp_session&.dig(:request_url) && target_app.present? && broker_issuer.present?
 
       redirect_to account_url
     end

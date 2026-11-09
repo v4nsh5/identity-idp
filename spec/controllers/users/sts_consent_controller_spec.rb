@@ -13,6 +13,7 @@ RSpec.describe Users::StsConsentController do
       request_url: sp_request_url,
       request_id: sp_request_id,
       sts_target_app: target_app,
+      sts_broker_issuer: issuer,
     }
   end
   let(:token_exchange_enabled) { true }
@@ -62,6 +63,7 @@ RSpec.describe Users::StsConsentController do
         consent = UserConsentSts.last
         expect(consent.user).to eq(user)
         expect(consent.target_app).to eq(target_app)
+        expect(consent.broker_issuer).to eq(issuer)
 
         expect(response).to redirect_to(sp_request_url)
         expect(@analytics).to have_logged_event(

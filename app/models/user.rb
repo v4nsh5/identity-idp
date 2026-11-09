@@ -527,7 +527,7 @@ class User < ApplicationRecord
   # Unexpired STS (token exchange) consents, which represent the services a
   # broker is allowed to act on the user's behalf for.
   def connected_delegations
-    sts_consents.unexpired.order(created_at: :desc)
+    sts_consents.with_broker.unexpired.order(created_at: :desc)
   end
 
   def delete_account_bullet_key

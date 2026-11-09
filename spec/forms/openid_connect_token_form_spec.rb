@@ -188,9 +188,20 @@ RSpec.describe OpenidConnectTokenForm do
         end
       end
 
+      context 'when the user consented to the target app only through another broker' do
+        before do
+          create(:user_consent_sts, user:, broker_issuer: 'other-broker', target_app:)
+        end
+
+        it 'adds a missing consent error' do
+          expect(valid?).to be false
+          expect(form.errors.details[:code]).to include(error: :delegation_consent_required)
+        end
+      end
+
       context 'when the user has consented to the target app' do
         before do
-          create(:user_consent_sts, user:, target_app:)
+          create(:user_consent_sts, user:, broker_issuer: client_id, target_app:)
         end
 
         it 'is valid' do
@@ -704,7 +715,10 @@ RSpec.describe OpenidConnectTokenForm do
             .and_return([service_provider.issuer])
           allow(IdentityConfig.store).to receive(:token_exchange_allowed_targets)
             .and_return([{ issuer: 'records-issuer', scope: 'records' }])
-          create(:user_consent_sts, user:, target_app: 'records-issuer')
+          create(
+            :user_consent_sts,
+            user:, broker_issuer: service_provider.issuer, target_app: 'records-issuer',
+          )
         end
 
         it 'issues a subject token bound to the key' do
@@ -987,7 +1001,7 @@ RSpec.describe OpenidConnectTokenForm do
           actor_return_log_id: 123,
           expires_in: IdentityConfig.store.openid_connect_authorization_code_expiration_seconds,
         )
-        create(:user_consent_sts, user:, target_app:)
+        create(:user_consent_sts, user:, broker_issuer: client_id, target_app:)
       end
 
       it 'returns a subject token response' do

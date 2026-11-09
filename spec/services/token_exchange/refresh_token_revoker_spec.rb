@@ -47,15 +47,29 @@ RSpec.describe TokenExchange::RefreshTokenRevoker do
       )
     end
 
+    let(:broker_issuer) { records_family.broker_issuer }
+
     it 'revokes only the families whose sign-in asked for that target' do
-      described_class.revoke_for_target(user:, target_app: 'records-issuer')
+      described_class.revoke_for_target(user:, broker_issuer:, target_app: 'records-issuer')
 
       expect(records_family.reload.revocation_reason).to eq('consent_revoked')
       expect(passport_family.reload).not_to be_revoked
     end
 
+    it 'leaves another broker’s families for the same target alone' do
+      other_broker_family = create(
+        :token_exchange_refresh_token,
+        user:, broker_issuer: 'other-broker', scope: 'openid token_exchange:records',
+      )
+
+      described_class.revoke_for_target(user:, broker_issuer:, target_app: 'records-issuer')
+
+      expect(other_broker_family.reload).not_to be_revoked
+    end
+
     it 'revokes nothing for a target that is not configured' do
-      expect(described_class.revoke_for_target(user:, target_app: 'unknown')).to eq(0)
+      expect(described_class.revoke_for_target(user:, broker_issuer:, target_app: 'unknown'))
+        .to eq(0)
     end
   end
 end

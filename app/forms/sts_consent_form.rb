@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-# Captures a user's consent for an STS (token exchange) broker service provider
-# and persists it to the user_consent_sts table.
+# Captures a user's consent for an STS (token exchange) broker service provider to act at a
+# target service provider, and persists it to the user_consent_sts table.
 class StsConsentForm
   include ActiveModel::Model
   include ActionView::Helpers::TranslationHelper
@@ -12,8 +12,9 @@ class StsConsentForm
 
   attr_reader :consent_given
 
-  def initialize(user:, target_app:)
+  def initialize(user:, broker_issuer:, target_app:)
     @user = user
+    @broker_issuer = broker_issuer
     @target_app = target_app
   end
 
@@ -33,7 +34,7 @@ class StsConsentForm
   private
 
   attr_accessor :success
-  attr_reader :user, :target_app
+  attr_reader :user, :broker_issuer, :target_app
 
   def validate_consent_given
     return if @consent_given
@@ -46,7 +47,7 @@ class StsConsentForm
   end
 
   def process_successful_submission
-    consent = UserConsentSts.find_or_initialize_by(user: user, target_app: target_app)
+    consent = UserConsentSts.find_or_initialize_by(user:, broker_issuer:, target_app:)
     # Refresh the consent timestamp so a previously expired consent becomes valid again.
     consent.created_at = Time.zone.now if consent.persisted?
     consent.save!

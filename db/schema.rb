@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_09_190000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_10_190050) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -741,10 +741,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_09_190000) do
 
   create_table "user_consent_sts", comment: "Records of user consent for STS token exchange flows", force: :cascade do |t|
     t.bigint "user_id", null: false, comment: "sensitive=false"
-    t.string "target_app", null: false, comment: "Issuer of the broker SP the user consented to sensitive=false"
+    t.string "target_app", null: false, comment: "Issuer of the target SP the broker may act at sensitive=false"
     t.datetime "created_at", null: false, comment: "sensitive=false"
     t.datetime "updated_at", null: false, comment: "sensitive=false"
-    t.index ["user_id", "target_app"], name: "index_user_consent_sts_on_user_id_and_target_app", unique: true
+    t.string "broker_issuer", comment: "Issuer of the broker SP the user allowed to act for them sensitive=false"
+    t.index ["user_id", "broker_issuer", "target_app"], name: "index_user_consent_sts_on_user_broker_target", unique: true
     t.index ["user_id"], name: "index_user_consent_sts_on_user_id"
   end
 

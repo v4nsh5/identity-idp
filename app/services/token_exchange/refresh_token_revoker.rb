@@ -35,15 +35,15 @@ module TokenExchange
       )
     end
 
-    # The person revoked delegation consent for a target, so families whose sign-in asked for
-    # that target can no longer be refreshed.
-    def revoke_for_target(user:, target_app:)
+    # The person revoked a broker's delegation consent for a target, so that broker's families
+    # whose sign-in asked for the target can no longer be refreshed.
+    def revoke_for_target(user:, broker_issuer:, target_app:)
       target = IdentityConfig.store.token_exchange_allowed_targets
         .find { |allowed| allowed[:issuer] == target_app }
       return 0 if target.blank?
 
       target_scope = "#{TokenExchange::Constants::SCOPE_PREFIX}#{target.fetch(:scope)}"
-      families = TokenExchangeRefreshToken.unrevoked.where(user_id: user.id)
+      families = TokenExchangeRefreshToken.unrevoked.where(user_id: user.id, broker_issuer:)
         .pluck(:family_id, :scope)
         .select { |_family_id, scope| scope.to_s.split(' ').include?(target_scope) }
         .map(&:first)

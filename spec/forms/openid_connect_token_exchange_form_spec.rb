@@ -34,7 +34,7 @@ RSpec.describe OpenidConnectTokenExchangeForm do
       ial: 2,
     )
   end
-  let!(:sts_consent) { create(:user_consent_sts, user:, target_app: target_issuer) }
+  let!(:sts_consent) { create(:user_consent_sts, user:, broker_issuer:, target_app: target_issuer) }
   let(:scope) { 'openid token_exchange:passport' }
   let(:actor_return_log) do
     create(
@@ -75,6 +75,19 @@ RSpec.describe OpenidConnectTokenExchangeForm do
   describe '#submit' do
     it 'returns success for a valid token exchange request' do
       expect(form.submit.success?).to eq(true)
+    end
+
+    context 'when the user consented to the target only through another broker' do
+      let!(:sts_consent) do
+        create(:user_consent_sts, user:, broker_issuer: 'other-broker', target_app: target_issuer)
+      end
+
+      it 'refuses the exchange without issuing a delegated token' do
+        expect(form.submit.success?).to eq(false)
+        expect(form.errors.details[:subject_token]).to include(error: :invalid_audience)
+        expect(form.response[:error]).to eq('invalid_grant')
+        expect(DelegatedIssuanceLog.count).to eq(0)
+      end
     end
 
     it 'surfaces delegated token exchange analytics fields' do
@@ -190,7 +203,7 @@ RSpec.describe OpenidConnectTokenExchangeForm do
           ],
         )
         create(:service_provider_identity, user:, service_provider: other_target.issuer, ial: 2)
-        create(:user_consent_sts, user:, target_app: other_target.issuer)
+        create(:user_consent_sts, user:, broker_issuer:, target_app: other_target.issuer)
       end
 
       it 'is invalid' do
@@ -699,7 +712,7 @@ RSpec.describe OpenidConnectTokenExchangeForm do
           ],
         )
         create(:service_provider_identity, user:, service_provider: other_target.issuer, ial: 2)
-        create(:user_consent_sts, user:, target_app: other_target.issuer)
+        create(:user_consent_sts, user:, broker_issuer:, target_app: other_target.issuer)
       end
 
       it 'returns invalid_target' do

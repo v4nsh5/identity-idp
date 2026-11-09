@@ -2,12 +2,13 @@ require 'rails_helper'
 
 RSpec.describe 'users/sts_consent/new.html.erb' do
   let(:user) { build_stubbed(:user, :fully_registered) }
-  let(:target_app) { 'urn:gov:gsa:openidconnect:sp:broker' }
+  let(:broker_issuer) { 'urn:gov:gsa:openidconnect:sp:broker' }
+  let(:target_app) { 'urn:gov:gsa:openidconnect:sp:target' }
 
   before do
     allow(view).to receive(:current_user).and_return(user)
     allow(view).to receive(:nds_layout?).and_return(false)
-    @sts_consent_form = StsConsentForm.new(user: user, target_app: target_app)
+    @sts_consent_form = StsConsentForm.new(user:, broker_issuer:, target_app:)
   end
 
   it 'has a localized title' do

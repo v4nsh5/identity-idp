@@ -83,7 +83,10 @@ RSpec.describe Users::StsConsentRevokeController do
     it 'revokes the refresh token families whose sign-in asked for the target' do
       allow(IdentityConfig.store).to receive(:token_exchange_allowed_targets)
         .and_return([{ issuer: consent.target_app, scope: 'records' }])
-      refresh_token = create(:token_exchange_refresh_token, user:, scope: 'token_exchange:records')
+      refresh_token = create(
+        :token_exchange_refresh_token,
+        user:, broker_issuer: consent.broker_issuer, scope: 'token_exchange:records',
+      )
 
       subject
 

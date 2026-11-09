@@ -158,7 +158,9 @@ class OpenidConnectTokenExchangeForm
   def validate_consent
     return if user.blank?
 
-    return if UserConsentSts.consent_valid?(user: identity.user, target_app: audience)
+    return if UserConsentSts.consent_valid?(
+      user: identity.user, broker_issuer: client_id, target_app: audience,
+    )
 
     errors.add(
       :subject_token,

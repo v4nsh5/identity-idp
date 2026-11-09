@@ -258,7 +258,7 @@ RSpec.describe OpenidConnect::TokenController do
         .and_return([broker_issuer])
       allow(IdentityConfig.store).to receive(:token_exchange_allowed_targets)
         .and_return([{ issuer: target_issuer, scope: 'passport' }])
-      create(:user_consent_sts, user:, target_app: target_issuer)
+      create(:user_consent_sts, user:, broker_issuer:, target_app: target_issuer)
     end
 
     context 'with valid params' do
@@ -483,7 +483,7 @@ RSpec.describe OpenidConnect::TokenController do
       allow(IdentityConfig.store).to receive(:dpop_required_issuers).and_return([broker_issuer])
       allow(IdentityConfig.store).to receive(:token_exchange_allowed_targets)
         .and_return([{ issuer: target_issuer, scope: 'passport' }])
-      create(:user_consent_sts, user:, target_app: target_issuer)
+      create(:user_consent_sts, user:, broker_issuer:, target_app: target_issuer)
     end
 
     def refresh(refresh_token)

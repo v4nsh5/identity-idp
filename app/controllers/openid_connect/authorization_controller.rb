@@ -120,11 +120,15 @@ module OpenidConnect
       return false unless IdentityConfig.store.token_exchange_enabled
       return false unless token_exchange_scope_requested?
 
-      !UserConsentSts.consent_valid?(user: current_user, target_app:)
+      !UserConsentSts.consent_valid?(
+        user: current_user, broker_issuer: @authorize_form.client_id, target_app:,
+      )
     end
 
+    # The consent screen records consent for this broker, the one the request came from.
     def redirect_to_sts_consent
       sp_session[:sts_target_app] = target_app
+      sp_session[:sts_broker_issuer] = @authorize_form.client_id
       redirect_to sts_consent_url
     end
 

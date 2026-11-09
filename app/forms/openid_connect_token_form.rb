@@ -278,7 +278,9 @@ class OpenidConnectTokenForm
   def validate_consent
     return if identity.user.blank?
 
-    return if UserConsentSts.consent_valid?(user: identity.user, target_app:)
+    return if UserConsentSts.consent_valid?(
+      user: identity.user, broker_issuer: client_id, target_app:,
+    )
 
     errors.add(:code, :delegation_consent_required, message: 'Delegation consent required')
   end
